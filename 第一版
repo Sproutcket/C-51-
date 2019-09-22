@@ -1,0 +1,223 @@
+#include <reg52.h>
+typedef unsigned char uchar;
+typedef unsigned int uint;
+ 
+sbit beep = P2^0;
+
+sbit LSA = P2^2;
+sbit LSB = P2^3;
+sbit LSC = P2^4;
+//
+sbit K1 = P3^0;
+sbit K2 = P3^1;
+sbit K3 = P3^2;
+sbit K4 = P3^3;
+
+uint pwm = 100; //占空比
+uint rate = 1;//频率
+bit flag = 0;//延时标志
+bit flag1 = 0;//延时标志
+
+uchar code smgduan[] = {0x3f, 0x06, 0x5b, 0x4f, 0x66,
+						0x6d, 0x7d, 0x07, 0x7f, 0x6f,
+						0x77, 0x7c, 0x39, 0x5e, 0x79,0x71 };
+
+
+void DigDisplay();
+void Delay();
+void key1();
+void key2();
+void key3();
+void key4();
+
+//void delay(uint time)
+//{
+//	while(time--);
+//}
+
+
+
+void DigDisplay(uint pwm,uint rate)
+{
+	uint i;
+	uchar figure[8][3] = {{0, 0, 0},
+			  		 {1, 0, 0},
+			  		 {0, 1, 0},
+			  		 {1, 1, 0},
+			  		 {0, 0, 1},
+			  		 {1, 0, 1},
+			  		 {0, 1, 1},
+			  		 {1, 1, 1} };	//数码管显示位数
+	uint sb[6] = {0, 5, 0, 4, 4, 1};
+
+	for(i = 0; i < 3;i++)
+	{
+		  LSA = figure[i][0];
+		  LSB = figure[i][1];
+		  LSC = figure[i][2];
+		  P0 = smgduan[pwm % 10];
+		  pwm /= 10;
+		  flag = 0;
+		  while(flag == 0);
+//		  delay(100);
+		  P0 = 0x00;
+	}
+
+	for(i = 4; i < 8;i++)
+	{
+		  LSA = figure[i][0];
+		  LSB = figure[i][1];
+		  LSC = figure[i][2];
+		  P0 = smgduan[rate % 10];
+		  rate /= 10;
+		  flag = 0;
+		  while(flag == 0);
+//		  delay(100);
+		  P0 = 0x00;
+	}
+
+}
+
+
+void Timer0Init()
+{
+	TMOD |= 0X01;
+	//设定初值
+	TH0 = (65535 - pwm * 100 * 100 / (rate / 100)) / 256;
+	TL0 = (65535 - pwm * 100 * 100 / (rate / 100)) % 256;	 
+	ET0 = 1;
+	EA = 1;
+	TR0 = 1;
+}
+ 
+
+
+
+
+///初始化定时器1，用于延迟
+void Timer1Init()
+{
+	TMOD |= 0X10;
+	//设定初值
+	TH1 = 0XFC;
+	TL1 = 0X18;	 //定时1ms后溢出
+	ET1 = 1;
+	EA = 1;
+	TR1 = 1;
+}
+//
+void Key1()
+{
+	if(K1 == 0)
+	{	 
+		flag = 0;
+		while(flag == 0);
+//		delay(100);
+		if(K1 == 0)
+		{
+			if (pwm <= 100)
+			pwm += 1;
+			else
+			pwm = 100;
+		}
+//		while(!K1);
+
+	}
+}
+
+void Key2()
+{
+	if(K2 == 0)
+	{	 
+		flag = 0;
+		while(flag == 0);
+//		delay(100);
+		if(K2 == 0)
+		{
+			if(pwm > 1)
+			pwm -= 1;
+			else
+			pwm = 1;
+		}
+//		while(!K2);
+
+	}
+}
+
+void Key3()
+{
+	if(K3 == 0)
+	{	 
+		flag = 0;
+		while(flag == 0);
+//		delay(100);
+		if(K3 == 0)
+		{
+			rate += 1;
+		}
+//		while(!K3);
+
+	}
+}
+
+void Key4()
+{
+	if(K4 == 0)
+	{	 
+		flag = 0;
+		while(flag == 0);
+//		delay(100);
+		if(K4 == 0)
+		{
+			rate -= 1;
+		}
+//		while(!K4);
+
+	}
+}
+void main()
+{
+	Timer0Init();
+	Timer1Init();
+	while(1)
+	{
+		DigDisplay(pwm, rate);
+		key1();
+		key2();
+		key3();
+		key4();
+//
+	}
+}
+
+void Timer0() interrupt 1
+{	
+	//重新设定初值
+	
+	if(flag1)
+	{	
+		TH0 = (65535 - pwm * 100 * 100 / (rate / 100)) / 256;
+		TL0 = (65535 - pwm * 100 * 100 / (rate / 100)) % 256;
+		beep = 1;
+		flag1 = 0;
+	}
+	else
+	{
+		TH0 = (65535 - (100 - pwm) * 100 * 100 / (rate / 100)) / 256;
+		TL0 = (65535 - (100 - pwm) * 100 * 100 / (rate / 100)) % 256;
+		beep = 0;
+		flag1 = 1;
+	}
+}
+
+void Timer1() interrupt 3
+{	
+//	static uint i;	//存放经过的毫秒数
+	
+	//重新设定初值
+	TH1 = 0XFC;
+	TL1 = 0X18;	
+	
+	flag = 1;	
+	 
+}
