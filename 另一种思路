@@ -1,0 +1,51 @@
+#include <reg52.h>
+typedef unsigned char uchar;
+typedef unsigned int uint;
+ 
+sbit beep = P1^5;
+
+
+
+uint pwm = 60; //占空比
+uint rate = 100;//频率
+ 
+
+void Timer0Init()
+{
+	TMOD |= 0X01;
+	//设定初值
+	TH0 = 0XFC;
+	TL0 = 0X18;	 
+	ET0 = 1;
+	EA = 1;
+	TR0 = 1;
+}
+
+void main()
+{
+	Timer0Init();
+	
+	while(1);
+	
+}
+
+
+void Timer0() interrupt 1
+{	
+	static uint i,j;
+	TH0 = 0XFC;
+	TL0 = 0X18;	 //重新设定初值
+	if(i = 10 * pwm / rate)
+	{
+		beep = 0;
+	}
+
+	if(j = 1000 / rate)
+	{
+		i = 0;
+		j = 0;
+		beep = 1;
+	}
+
+	
+}
